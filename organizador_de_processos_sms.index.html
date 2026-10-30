@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Processos SMS - DAOC</title>
+    
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS com Suporte a Modo Escuro -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        darkBorder: '#334155',
+                        brandIndigo: '#4f46e5'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-tab { animation: fadeIn 0.2s ease-out forwards; }
+
+        /* GARANTIA DE ESTILIZAÇÃO DO MODO ESCURO */
+        html.dark {
+            color-scheme: dark;
+        }
+        html.dark, html.dark body {
+            background-color: #0f172a !important;
+            color: #f1f5f9 !important;
+        }
+        html.dark header,
+        html.dark aside,
+        html.dark nav,
+        html.dark .bg-white {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+        }
+        html.dark .bg-gray-50,
+        html.dark .bg-gray-50\/80,
+        html.dark .bg-\[\#f8fafc\] {
+            background-color: #0f172a !important;
+        }
+        html.dark .text-gray-800 {
+            color: #f8fafc !important;
+        }
+        html.dark .text-gray-600 {
+            color: #cbd5e1 !important;
+        }
+        html.dark .text-gray-500 {
+            color: #94a3b8 !important;
+        }
+        html.dark .border-gray-100,
+        html.dark .border-gray-200,
+        html.dark .border-gray-200\/80,
+        html.dark .border-gray-200\/70,
+        html.dark .border-gray-200\/60 {
+            border-color: #334155 !important;
+        }
+        html.dark input,
+        html.dark textarea,
+        html.dark select {
+            background-color: #334155 !important;
+            color: #f8fafc !important;
+            border-color: #475569 !important;
+        }
+        html.dark table thead tr {
+            background-color: #0f172a !important;
+        }
+        html.dark table tbody tr {
+            border-color: #334155 !important;
+        }
+        html.dark table tbody tr:hover {
+            background-color: #243247 !important;
+        }
+    </style>
+</head>
+<body class="bg-[#f8fafc] dark:bg-darkBg text-gray-800 dark:text-gray-100 transition-colors duration-200 min-h-screen flex flex-col overflow-hidden">
+
+    <!-- TOAST DE NOTIFICAÇÃO (Sem alert nativo) -->
+    <div id="toast" class="fixed top-5 right-5 z-50 bg-gray-900/95 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 transition-all duration-300 opacity-0 pointer-events-none translate-y-[-10px]">
+        <span id="toastIcon">✨</span>
+        <span id="toastMsg" class="text-sm font-semibold">Notificação</span>
+    </div>
+
+    <!-- BARRA SUPERIOR GLOBAL -->
+    <header class="flex justify-between items-center px-6 py-3 bg-white dark:bg-darkCard border-b border-gray-200/80 dark:border-darkBorder shrink-0 z-20">
+        <!-- Logo e Título -->
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-[#4f46e5] flex items-center justify-center text-white font-black text-sm shadow-md">
+                SMS
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white tracking-tight leading-tight">
+                    Gestor de Processos SMS
+                </h1>
+                <p class="text-[11px] text-gray-400 font-medium">DAOC • Divisão de Atendimento aos Órgãos de Controle</p>
+            </div>
+        </div>
+        
+        <!-- Indicadores Superiores: Data de Referência e Modo Escuro -->
+        <div class="flex items-center gap-4 md:gap-6">
+            <!-- Indicador de Status do Armazenamento -->
+            <div id="statusArmazenamento" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800" title="Status de persistência dos seus processos">
+                <span id="statusArmazenamentoDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="statusArmazenamentoTexto">Carregando banco...</span>
+            </div>
+
+            <!-- Widget de Status do Dia (Data Real do Computador) -->
+            <div class="flex items-center gap-2 bg-[#f1f5f9] dark:bg-gray-800 px-3.5 py-1.5 rounded-full border border-gray-200/60 dark:border-gray-700" title="Data atual real do seu computador usada para calcular os prazos">
+                <span class="text-[11px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                    <span>📅</span> HOJE:
+                </span>
+                <span id="topbarDataRef" class="font-mono text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                    --/--/----
+                </span>
+            </div>
+
+            <!-- Botão de Modo Escuro -->
+            <button id="btnDarkMode" onclick="alternarModoEscuro()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer" title="Alternar Modo Escuro">
+                <svg id="iconMoon" class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg id="iconSun" class="w-5 h-5 stroke-current fill-none stroke-[2] hidden" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- SIDEBAR DESKTOP -->
+        <aside class="w-64 bg-white dark:bg-darkCard border-r border-gray-200/80 dark:border-darkBorder hidden md:flex flex-col justify-between shrink-0">
+            <nav class="p-4 space-y-2">
+                <!-- Visão Geral (Ativo) -->
+                <button onclick="changeTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all bg-[#eef2ff] dark:bg-indigo-950/50 text-[#4f46e5] dark:text-indigo-400 font-bold">
+                    <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                    <span>Visão Geral</span>
+                </button>
+                <!-- Meus Processos (Tabela com as 8 colunas) -->
+                <button onclick="changeTab('processos')" id="nav-processos" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span>Meus Processos</span>
+                    </div>
+                    <span id="badgeProcessosAtivos" class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+                <!-- Prazos Críticos -->
+                <button onclick="changeTab('prazos')" id="nav-prazos" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Prazos Críticos</span>
+                    </div>
+                    <span id="badgeCriticos" class="hidden bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+                </button>
+                <!-- Dilações de Prazo -->
+                <button onclick="changeTab('dilacoes')" id="nav-dilacoes" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Dilações de Prazo</span>
+                </button>
+                <!-- Arquivados -->
+                <button onclick="changeTab('arquivados')" id="nav-arquivados" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect width="22" height="5" x="1" y="3"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                    <span>Arquivados</span>
+                </button>
+            </nav>
+
+            <!-- Ação Rápida no Rodapé da Barra Lateral -->
+            <div class="p-4 border-t border-gray-100 dark:border-darkBorder">
+                <button onclick="abrirModalNovo()" class="w-full flex items-center justify-center gap-2 bg-[#4f46e5] hover:bg-indigo-700 text-white text-sm font-bold py-3 rounded-2xl transition-all shadow-md">
+                    <svg class="w-4 h-4 stroke-current fill-none stroke-[2.5]" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Novo Processo</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL COM SCROLL -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 pb-24 md:pb-10">
+
+            <!-- ========================================== -->
+            <!-- ABA 1: VISÃO GERAL / PAINEL DE PRAZOS      -->
+            <!-- ========================================== -->
+            <section id="tab-dashboard" class="tab-content max-w-6xl mx-auto space-y-6 animate-tab">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-gray-800 dark:text-white flex items-center gap-2">
+                            Painel de Prazos SMS <span class="text-2xl">📋</span>
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">
+                            Acompanhe os ofícios recebidos, prazos das áreas e respostas aos órgãos de controle.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="limparTodosProcessos()" class="flex items-center gap-2 bg-white dark:bg-darkCard border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm text-red-600 dark:text-red-400">
+                            <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Limpar Tudo
+                        </button>
+                        <button onclick="exportarBackup()" class="flex items-center gap-2 bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm text-gray-700 dark:text-gray-200" title="Exportar backup completo em JSON">
+                            <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Exportar Backup
+                        </button>
+                        <button onclick="document.getElementById('fileInput').click()" class="flex items-center gap-2 bg-white dark:bg-darkCard border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm text-gray-700 dark:text-gray-200">
+                            <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Importar
+                        </button>
+                        <input type="file" id="fileInput" accept=".json" class="hidden" onchange="importarBackup(event)">
+                        
+                        <button onclick="abrirModalNovo()" class="flex items-center gap-2 bg-[#4f46e5] hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+                            <svg class="w-4 h-4 stroke-current fill-none stroke-[2.5]" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Novo Processo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- OS 4 CARDS DE MÉTRICAS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Card 1: Processos Ativos -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-darkBorder flex items-center gap-4 transition-all hover:shadow-md">
+                        <div class="w-12 h-12 shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <svg class="w-6 h-6 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Processos Ativos</p>
+                            <p class="text-2xl font-extrabold text-gray-800 dark:text-white mt-0.5">
+                                <span id="statProcessosAtivos">0</span> <span class="text-xs font-normal text-gray-400">em aberto</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: No Prazo (A Vencer) -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-darkBorder flex items-center gap-4 transition-all hover:shadow-md">
+                        <div class="w-12 h-12 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <svg class="w-6 h-6 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">No Prazo (A Vencer)</p>
+                            <p class="text-2xl font-extrabold text-gray-800 dark:text-white mt-0.5">
+                                <span id="statNoPrazo">0</span> <span class="text-xs font-normal text-gray-400">futuros</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Processos Vencidos -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-darkBorder flex items-center gap-4 transition-all hover:shadow-md">
+                        <div class="w-12 h-12 shrink-0 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400">
+                            <svg class="w-6 h-6 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Processos Vencidos</p>
+                            <p id="statVencidos" class="text-2xl font-extrabold text-red-600 dark:text-red-400 mt-0.5">
+                                0
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Vencem no Dia -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-darkBorder flex items-center gap-4 transition-all hover:shadow-md relative overflow-hidden">
+                        <div class="w-12 h-12 shrink-0 rounded-full bg-yellow-100 dark:bg-yellow-900/40 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+                            <svg class="w-6 h-6 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Vencem no Dia (Hoje)</p>
+                            <p id="statVencemHoje" class="text-2xl font-extrabold text-gray-800 dark:text-white mt-0.5">0</p>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-yellow-500"></div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO PRINCIPAL DA PÁGINA INICIAL: VENCIDOS, VENCEM NO DIA E A VENCER -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Painel 1: Vencidos -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-red-200/80 dark:border-red-900/40 flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                            <h3 class="text-sm font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                                Vencidos
+                            </h3>
+                            <span id="badgeCountVencidos" class="text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <div id="homeListVencidos" class="space-y-3 mt-4 flex-1 overflow-y-auto max-h-[460px] custom-scrollbar"></div>
+                    </div>
+
+                    <!-- Painel 2: Vencem no Dia -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-yellow-200/80 dark:border-yellow-900/40 flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                            <h3 class="text-sm font-extrabold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                                Vencem no Dia
+                            </h3>
+                            <span id="badgeCountHoje" class="text-xs bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 font-bold px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <div id="homeListHoje" class="space-y-3 mt-4 flex-1 overflow-y-auto max-h-[460px] custom-scrollbar"></div>
+                    </div>
+
+                    <!-- Painel 3: A Vencer (No Prazo) -->
+                    <div class="bg-white dark:bg-darkCard p-5 rounded-2xl shadow-sm border border-green-200/80 dark:border-green-900/40 flex flex-col">
+                        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                            <h3 class="text-sm font-extrabold text-green-600 dark:text-green-400 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                                A Vencer (No Prazo)
+                            </h3>
+                            <span id="badgeCountFuturos" class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 font-bold px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <div id="homeListFuturos" class="space-y-3 mt-4 flex-1 overflow-y-auto max-h-[460px] custom-scrollbar"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- ABA 2: MEUS PROCESSOS (COM AS COLUNAS DE ACOMPANHAMENTO)       -->
+            <!-- ============================================================== -->
+            <section id="tab-processos" class="tab-content max-w-6xl mx-auto space-y-6 hidden animate-tab">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-white">Meus Processos 📁</h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Controle completo com todas as colunas de acompanhamento da DAOC.</p>
+                    </div>
+                    <button onclick="abrirModalNovo()" class="flex items-center gap-2 bg-[#4f46e5] hover:bg-indigo-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
+                        <svg class="w-4 h-4 stroke-current fill-none stroke-[2.5]" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Novo Processo
+                    </button>
+                </div>
+
+                <!-- Campo de Pesquisa em Tempo Real -->
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                        <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </div>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        oninput="renderizarProcessos()" 
+                        placeholder="Pesquisar por número SEI, órgão, autoridade, assessor ou assunto..." 
+                        class="w-full pl-11 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-darkCard text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
+                    />
+                </div>
+
+                <!-- Filtros Rápidos de Status -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-gray-400 font-semibold uppercase text-[10px] mr-1">Filtrar:</span>
+                    <button onclick="setFiltroStatus('todos')" id="filter-todos" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-indigo-600 text-white shadow-sm">Todos (Ativos)</button>
+                    <button onclick="setFiltroStatus('vencido')" id="filter-vencido" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">🔴 Vencidos</button>
+                    <button onclick="setFiltroStatus('hoje')" id="filter-hoje" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">🟡 Vencem Hoje</button>
+                    <button onclick="setFiltroStatus('futuro')" id="filter-futuro" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">🟢 No Prazo</button>
+                    <button onclick="setFiltroStatus('dilacao')" id="filter-dilacao" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">⏳ Com Dilação</button>
+                    <button onclick="setFiltroStatus('arquivados')" id="filter-arquivados" class="px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">🗄️ Arquivados</button>
+                </div>
+
+                <!-- TABELA COMPLETA COM TODAS AS COLUNAS -->
+                <div class="bg-white dark:bg-darkCard rounded-2xl shadow-sm border border-gray-100 dark:border-darkBorder overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-50/80 dark:bg-gray-800/80 text-[11px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200/70 dark:border-darkBorder">
+                                    <th class="p-4">Número do Processo</th>
+                                    <th class="p-4">Órgão</th>
+                                    <th class="p-4">Autoridade</th>
+                                    <th class="p-4">Assessor Responsável</th>
+                                    <th class="p-4">Secretaria Executiva e Setor / Área SMS</th>
+                                    <th class="p-4">Prazo da Área</th>
+                                    <th class="p-4">Prazo do Ofício</th>
+                                    <th class="p-4">Dilação de Prazo</th>
+                                    <th class="p-4">Assunto do Processo</th>
+                                    <th class="p-4 text-center">Arquivado?</th>
+                                    <th class="p-4 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaProcessosBody" class="divide-y divide-gray-100 dark:divide-darkBorder">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- ABA 3: PRAZOS CRÍTICOS (VENCIDOS E VENCEM NO DIA)              -->
+            <!-- ============================================================== -->
+            <section id="tab-prazos" class="tab-content max-w-4xl mx-auto space-y-6 hidden animate-tab">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-white">Prazos Críticos ⏰</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Ofícios que atingiram a data fatal ou já expiraram e demandam providências imediatas.</p>
+                </div>
+
+                <!-- Vencem no Dia -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Vencem no Dia (Hoje)
+                    </h3>
+                    <div id="listaVencemHoje" class="space-y-3"></div>
+                </div>
+
+                <!-- Vencidos -->
+                <div class="space-y-3 pt-4">
+                    <h3 class="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                        Processos Vencidos
+                    </h3>
+                    <div id="listaVencidos" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- ABA 4: DILAÇÕES DE PRAZO SOLICITADAS                           -->
+            <!-- ============================================================== -->
+            <section id="tab-dilacoes" class="tab-content max-w-4xl mx-auto space-y-6 hidden animate-tab">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-white">Dilações de Prazo Solicitadas ⏳</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Processos que tiveram pedido formal de prorrogação junto ao órgão requisitante.</p>
+                </div>
+                <div id="listaDilacoes" class="space-y-4"></div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- ABA 5: PROCESSOS ARQUIVADOS                                    -->
+            <!-- ============================================================== -->
+            <section id="tab-arquivados" class="tab-content max-w-6xl mx-auto space-y-6 hidden animate-tab">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-white">Processos Arquivados 🗄️</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Histórico de ofícios concluídos, respondidos e protocolados.</p>
+                </div>
+                <div id="listaArquivados" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: CADASTRAR OU EDITAR PROCESSO (AS 9 INFORMAÇÕES) -->
+    <div id="modalNovoProcesso" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden border border-gray-100 dark:border-darkBorder">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-indigo-50/50 dark:bg-indigo-900/20">
+                <h2 id="modalTituloProcesso" class="text-xl font-bold text-gray-800 dark:text-white">Cadastrar Novo Processo</h2>
+                <button onclick="fecharModalNovo()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">1. Número do Processo *</label>
+                        <input type="text" id="inputNumero" placeholder="6018.2026/0116590-3" class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">2. Órgão *</label>
+                        <input type="text" id="inputOrgao" placeholder="MPE-SP, DPE-SP, TCM, TJSP..." class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">3. Nome da Autoridade que mandou</label>
+                        <input type="text" id="inputAutoridade" placeholder="Ex: Promotor de Justiça, Juiz 2ª Vara..." class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">4. Assessor Responsável *</label>
+                        <input type="text" id="inputAssessor" placeholder="Ex: Wilson, Carol, Felipe, Bia..." class="w-full p-2.5 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">5. Secretaria Executiva e Setor / Área SMS</label>
+                    <input type="text" id="inputSecretariaArea" placeholder="Ex: SEABEVS - CRS-S, DTIC/SEGA, COGEP..." class="w-full p-2.5 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-1 flex items-center justify-between">
+                            <span>6. Prazo da Área (Interno)</span>
+                            <span class="text-[10px] font-normal lowercase text-gray-400">Resposta do setor</span>
+                        </label>
+                        <input type="date" id="inputPrazoArea" class="w-full p-2.5 rounded-xl border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1 flex items-center justify-between">
+                            <span>7. Prazo do Ofício (Data Fatal) *</span>
+                            <span class="text-[10px] font-normal lowercase text-red-500">Órgão de controle</span>
+                        </label>
+                        <input type="date" id="inputPrazoOficio" class="w-full p-2.5 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">8. Solicitação de Dilação de Prazo</label>
+                    <input type="text" id="inputDilacao" placeholder="Ex: Aguardando retorno SMS / Solicitado +15 dias" class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">9. Assunto do Processo</label>
+                    <textarea id="inputAssunto" rows="2" placeholder="Descreva brevemente o teor do ofício ou solicitação..." class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3">
+                <button onclick="fecharModalNovo()" class="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+                <button id="btnSalvarProcesso" onclick="salvarProcesso()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm">Salvar Processo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EXCLUSÃO (Sem confirm() nativo) -->
+    <div id="modalConfirmacao" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-100 dark:border-darkBorder text-center">
+            <div id="modalConfirmacaoIcone" class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <h3 id="modalConfirmacaoTitulo" class="text-lg font-bold text-gray-800 dark:text-white mb-2">Excluir Processo?</h3>
+            <p id="modalConfirmacaoDesc" class="text-sm text-gray-500 dark:text-gray-400 mb-6">Esta ação removerá definitivamente o processo da sua lista de controle.</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="fecharModalConfirmacao()" class="px-4 py-2 rounded-xl text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">Cancelar</button>
+                <button id="btnConfirmarAcaoModal" onclick="executarConfirmacaoModal()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-sm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVBAR MOBILE (Para acesso em smartphones e telas pequenas) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-gray-200 dark:border-darkBorder flex justify-around items-center p-2 z-40">
+        <button onclick="changeTab('dashboard')" class="flex flex-col items-center p-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <span class="text-[10px] mt-0.5 font-bold">Painel</span>
+        </button>
+        <button onclick="changeTab('processos')" class="flex flex-col items-center p-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="text-[10px] mt-0.5 font-bold">Processos</span>
+        </button>
+        <button onclick="changeTab('prazos')" class="flex flex-col items-center p-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span class="text-[10px] mt-0.5 font-bold">Prazos</span>
+        </button>
+        <button onclick="changeTab('dilacoes')" class="flex flex-col items-center p-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="text-[10px] mt-0.5 font-bold">Dilações</span>
+        </button>
+        <button onclick="changeTab('arquivados')" class="flex flex-col items-center p-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect width="22" height="5" x="1" y="3"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            <span class="text-[10px] mt-0.5 font-bold">Arquivo</span>
+        </button>
+    </nav>
+
+    <!-- LÓGICA E DADOS REAIS DA SMS -->
+    <script>
+        // CONFIGURAÇÕES E ESTADO GLOBAL
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sms-gestor-processos-daoc';
+        let isCloudAvailable = false;
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let cloudDocRefFn = null;
+        let cloudSetDocFn = null;
+        let cloudDeleteDocFn = null;
+
+        // BANCO DE DADOS LOCAL VIA INDEXEDDB (Resistente ao sandbox do Google Sites)
+        const IDB_NAME = 'SMS_DAOC_Processos_DB';
+        const IDB_STORE = 'processos';
+
+        function abrirIndexedDB() {
+            return new Promise((resolve) => {
+                if (!window.indexedDB) return resolve(null);
+                const req = indexedDB.open(IDB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains(IDB_STORE)) {
+                        database.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        async function salvarNoIndexedDB(lista) {
+            try {
+                const idb = await abrirIndexedDB();
+                if (!idb) return;
+                const tx = idb.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                store.clear();
+                lista.forEach(item => store.put(item));
+            } catch (err) {
+                console.warn("Falha ao salvar no IndexedDB:", err);
+            }
+        }
+
+        async function carregarDoIndexedDB() {
+            try {
+                const idb = await abrirIndexedDB();
+                if (!idb) return null;
+                return new Promise((resolve) => {
+                    const tx = idb.transaction(IDB_STORE, 'readonly');
+                    const store = tx.objectStore(IDB_STORE);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result && req.result.length ? req.result : null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (err) {
+                return null;
+            }
+        }
+
+        // ATUALIZAR INDICADOR DE STATUS DO ARMAZENAMENTO
+        function atualizarIndicadorStatus(tipo) {
+            const texto = document.getElementById('statusArmazenamentoTexto');
+            const dot = document.getElementById('statusArmazenamentoDot');
+            const badge = document.getElementById('statusArmazenamento');
+            if (!badge || !texto || !dot) return;
+
+            if (tipo === 'nuvem') {
+                texto.innerText = 'Nuvem Conectada ☁️';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+                badge.className = 'hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+            } else {
+                texto.innerText = 'Banco Local Ativo 💾';
+                dot.className = 'w-2 h-2 rounded-full bg-sky-500';
+                badge.className = 'hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800';
+            }
+        }
+
+        // FUNÇÕES PARA DATA REAL AUTOMÁTICA DO COMPUTADOR
+        function obterDataHojeISO() {
+            const d = new Date();
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function formatarDataBR(isoStr) {
+            if (!isoStr) return '--';
+            const partes = isoStr.split('-');
+            if (partes.length !== 3) return isoStr;
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        // FUNÇÃO DE CÁLCULO DE DIFERENÇA EM DIAS E SINALIZAÇÃO DE ATENÇÃO
+        function calcularDiferencaDias(dataStr) {
+            if (!dataStr) return null;
+            let iso = dataStr;
+            if (dataStr.includes('/')) {
+                const parts = dataStr.split('/');
+                if (parts.length === 3) iso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            const partesHoje = HOJE_STR.split('-').map(Number);
+            const partesAlvo = iso.split('-').map(Number);
+            if (partesAlvo.length !== 3 || isNaN(partesAlvo[0]) || isNaN(partesAlvo[1]) || isNaN(partesAlvo[2])) return null;
+
+            const dataHoje = new Date(partesHoje[0], partesHoje[1] - 1, partesHoje[2]);
+            const dataAlvo = new Date(partesAlvo[0], partesAlvo[1] - 1, partesAlvo[2]);
+            const diffTime = dataAlvo - dataHoje;
+            return Math.round(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function normalizarParaISO(dataStr) {
+            if (!dataStr) return '';
+            if (dataStr.includes('/')) {
+                const parts = dataStr.split('/');
+                if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return dataStr;
+        }
+
+        function gerarBadgeAlertaPrazo(dataStr, tipo = 'oficio') {
+            const dias = calcularDiferencaDias(dataStr);
+            const ehArea = tipo === 'area';
+
+            if (dias === null) {
+                return `<span class="inline-flex items-center text-[10px] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">Não inf.</span>`;
+            }
+
+            if (dias < 0) {
+                const atraso = Math.abs(dias);
+                return `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-extrabold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/70 px-2 py-0.5 rounded-md border border-red-300 dark:border-red-800 animate-pulse" title="${ehArea ? 'Setor interno em atraso! Cobrar resposta.' : 'Prazo fatal expirado!'}">
+                        🚨 ${ehArea ? 'ÁREA EXPIRADA' : 'OFÍCIO VENCIDO'} (${atraso}d atrás)
+                    </span>
+                `;
+            } else if (dias === 0) {
+                return `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-black text-amber-900 dark:text-amber-100 bg-amber-300 dark:bg-amber-600 px-2 py-0.5 rounded-md border border-amber-400 shadow-sm animate-pulse" title="Vence hoje! Ação imediata necessária.">
+                        ⚠️ VENCE HOJE!
+                    </span>
+                `;
+            } else if (dias === 1) {
+                return `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-orange-800 dark:text-orange-200 bg-orange-100 dark:bg-orange-950/60 px-2 py-0.5 rounded-md border border-orange-300 dark:border-orange-800" title="Vence amanhã!">
+                        ⚡ VENCE AMANHÃ!
+                    </span>
+                `;
+            } else if (dias <= 3) {
+                return `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800" title="Prazo próximo (atenção especial)">
+                        ⏳ ATENÇÃO (${dias} dias)
+                    </span>
+                `;
+            } else {
+                return `
+                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                        ✓ No Prazo (${dias}d)
+                    </span>
+                `;
+            }
+        }
+
+        let HOJE_STR = obterDataHojeISO();
+        let processos = [];
+
+        let isDarkMode = false;
+        try {
+            const savedDark = localStorage.getItem('sms_dark_mode');
+            if (savedDark !== null) isDarkMode = JSON.parse(savedDark);
+        } catch (e) {
+            console.warn("Storage local indisponível para dark mode.", e);
+        }
+
+        let currentTab = 'dashboard';
+        let filtroStatusTabela = 'todos';
+        let acaoConfirmacaoPendente = null;
+        let editingProcessoId = null;
+
+        aplicarTema();
+
+        // INICIALIZAÇÃO DE ARMAZENAMENTO E PERSISTÊNCIA
+        async function iniciarArmazenamento() {
+            // Solicitar persistência permanente ao navegador (evita limpeza em cache)
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(() => {});
+            }
+
+            // 1. Tentar carregar do IndexedDB
+            const doIDB = await carregarDoIndexedDB();
+            if (doIDB && doIDB.length) {
+                processos = doIDB;
+                renderizarTudo();
+                atualizarIndicadorStatus('local');
+            } else {
+                // Fallback para localStorage
+                try {
+                    const saved = localStorage.getItem('sms_processos_v2');
+                    if (saved) {
+                        processos = JSON.parse(saved);
+                        renderizarTudo();
+                        salvarNoIndexedDB(processos);
+                    }
+                } catch (e) {}
+                atualizarIndicadorStatus('local');
+            }
+
+            // 2. Conectar ao Armazenamento em Nuvem (se credenciais presentes no ambiente)
+            if (typeof __firebase_config !== 'undefined') {
+                try {
+                    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                    const { getAuth, signInAnonymously, signInWithCustomToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                    const { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                    cloudDocRefFn = doc;
+                    cloudSetDocFn = setDoc;
+                    cloudDeleteDocFn = deleteDoc;
+
+                    const fbConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(fbConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    // Autenticação antes de consultas
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    currentUser = auth.currentUser;
+                    if (currentUser) {
+                        isCloudAvailable = true;
+                        const processosCol = collection(db, 'artifacts', appId, 'public', 'data', 'processos');
+
+                        onSnapshot(processosCol, (snapshot) => {
+                            const cloudList = [];
+                            snapshot.forEach(docSnap => {
+                                const data = docSnap.data();
+                                cloudList.push({ ...data, id: Number(docSnap.id) || docSnap.id });
+                            });
+                            if (cloudList.length > 0 || processos.length === 0) {
+                                processos = cloudList;
+                                salvarNoIndexedDB(processos);
+                                renderizarTudo();
+                            }
+                            atualizarIndicadorStatus('nuvem');
+                        }, (error) => {
+                            console.error("Erro no sincronismo em nuvem:", error);
+                            atualizarIndicadorStatus('local');
+                        });
+                    }
+                } catch (err) {
+                    console.warn("Armazenamento em nuvem indisponível neste domínio:", err);
+                    atualizarIndicadorStatus('local');
+                }
+            } else {
+                atualizarIndicadorStatus('local');
+            }
+        }
+
+        async function salvarPersistencia(novoProcessoOuLista, acao = 'salvar', docId = null) {
+            // Salvar no banco IndexedDB e localStorage imediatamente
+            salvarNoIndexedDB(processos);
+            try {
+                localStorage.setItem('sms_processos_v2', JSON.stringify(processos));
+            } catch (e) {}
+
+            // Sincronizar com Nuvem se ativa
+            if (isCloudAvailable && db && currentUser && cloudDocRefFn) {
+                try {
+                    if (acao === 'salvar' && novoProcessoOuLista) {
+                        const targetId = String(novoProcessoOuLista.id);
+                        const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', targetId);
+                        await cloudSetDocFn(docRef, novoProcessoOuLista);
+                    } else if (acao === 'excluir' && docId) {
+                        const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', String(docId));
+                        await cloudDeleteDocFn(docRef);
+                    } else if (acao === 'limpar') {
+                        // Deletar documentos em lote
+                        for (const p of novoProcessoOuLista) {
+                            const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', String(p.id));
+                            await cloudDeleteDocFn(docRef);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Erro ao sincronizar na nuvem:", err);
+                }
+            }
+        }
+
+        function iniciarApp() {
+            aplicarTema();
+            configurarBotoesGlobais();
+            iniciarArmazenamento();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', iniciarApp);
+        } else {
+            iniciarApp();
+        }
+
+        function showToast(msg, icon = '✨') {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastIcon').innerText = icon;
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+            }, 3000);
+        }
+
+        function aplicarTema() {
+            const iconMoon = document.getElementById('iconMoon');
+            const iconSun = document.getElementById('iconSun');
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                if (document.body) document.body.classList.add('dark');
+                if (iconMoon) iconMoon.classList.add('hidden');
+                if (iconSun) iconSun.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                if (document.body) document.body.classList.remove('dark');
+                if (iconMoon) iconMoon.classList.remove('hidden');
+                if (iconSun) iconSun.classList.add('hidden');
+            }
+        }
+
+        function alternarModoEscuro() {
+            isDarkMode = !isDarkMode;
+            try {
+                localStorage.setItem('sms_dark_mode', JSON.stringify(isDarkMode));
+            } catch (e) {}
+            aplicarTema();
+            renderizarTudo();
+            showToast(isDarkMode ? 'Modo Escuro ativado 🌙' : 'Modo Claro ativado ☀️', isDarkMode ? '🌙' : '☀️');
+        }
+
+        function configurarBotoesGlobais() {
+            const btnDark = document.getElementById('btnDarkMode');
+            if (btnDark) btnDark.onclick = alternarModoEscuro;
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    fecharModalNovo();
+                    fecharModalConfirmacao();
+                }
+            });
+
+            const modalNovo = document.getElementById('modalNovoProcesso');
+            if (modalNovo) {
+                modalNovo.addEventListener('click', (e) => {
+                    if (e.target === modalNovo) fecharModalNovo();
+                });
+            }
+            const modalConf = document.getElementById('modalConfirmacao');
+            if (modalConf) {
+                modalConf.addEventListener('click', (e) => {
+                    if (e.target === modalConf) fecharModalConfirmacao();
+                });
+            }
+        }
+
+        function getStatus(prazoOficio, arquivado) {
+            if (arquivado) return 'arquivado';
+            if (!prazoOficio || prazoOficio === '--') return 'sem_prazo';
+            const iso = normalizarParaISO(prazoOficio);
+            if (!iso || iso.length !== 10) return 'sem_prazo';
+            if (iso < HOJE_STR) return 'vencido';
+            if (iso === HOJE_STR) return 'hoje';
+            return 'futuro';
+        }
+
+        function changeTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(`tab-${tabName}`);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.className = "nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800";
+            });
+            const activeBtn = document.getElementById(`nav-${tabName}`);
+            if (activeBtn) {
+                activeBtn.className = "nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all bg-[#eef2ff] dark:bg-indigo-950/50 text-[#4f46e5] dark:text-indigo-400 font-bold";
+            }
+
+            renderizarTudo();
+        }
+
+        function setFiltroStatus(status) {
+            filtroStatusTabela = status;
+            const botoes = ['todos', 'vencido', 'hoje', 'futuro', 'dilacao', 'arquivados'];
+            botoes.forEach(b => {
+                const btn = document.getElementById(`filter-${b}`);
+                if (btn) {
+                    if (b === status) {
+                        btn.className = "px-3 py-1.5 rounded-xl font-bold transition-all bg-indigo-600 text-white shadow-sm";
+                    } else {
+                        btn.className = "px-3 py-1.5 rounded-xl font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700";
+                    }
+                }
+            });
+            renderizarProcessos();
+        }
+
+        function renderizarTudo() {
+            HOJE_STR = obterDataHojeISO();
+            const elDataRef = document.getElementById('topbarDataRef');
+            if (elDataRef) elDataRef.innerText = formatarDataBR(HOJE_STR);
+
+            let total = processos.length;
+            let arquivados = 0;
+            let vencidos = 0;
+            let vencemHoje = 0;
+            let noPrazo = 0;
+
+            processos.forEach(p => {
+                const s = getStatus(p.prazoOficio, p.arquivado);
+                if (p.arquivado) arquivados++;
+                else if (s === 'vencido') vencidos++;
+                else if (s === 'hoje') vencemHoje++;
+                else if (s === 'futuro') noPrazo++;
+            });
+
+            const ativos = total - arquivados;
+
+            const elAtivos = document.getElementById('statProcessosAtivos');
+            if (elAtivos) elAtivos.innerText = ativos;
+
+            const elNoPrazo = document.getElementById('statNoPrazo');
+            if (elNoPrazo) elNoPrazo.innerText = noPrazo;
+
+            const elVencidos = document.getElementById('statVencidos');
+            if (elVencidos) elVencidos.innerText = vencidos;
+
+            const elVencemHoje = document.getElementById('statVencemHoje');
+            if (elVencemHoje) elVencemHoje.innerText = vencemHoje;
+
+            const elBadgeAtivos = document.getElementById('badgeProcessosAtivos');
+            if (elBadgeAtivos) elBadgeAtivos.innerText = ativos;
+
+            const badgeCriticos = document.getElementById('badgeCriticos');
+            if (badgeCriticos) {
+                if (vencidos + vencemHoje > 0) {
+                    badgeCriticos.innerText = vencidos + vencemHoje;
+                    badgeCriticos.classList.remove('hidden');
+                } else {
+                    badgeCriticos.classList.add('hidden');
+                }
+            }
+
+            renderizarListasHome();
+            renderizarProcessos();
+            renderizarCriticos();
+            renderizarDilacoes();
+            renderizarArquivados();
+        }
+
+        function renderizarListasHome() {
+            const listVencidos = document.getElementById('homeListVencidos');
+            const listHoje = document.getElementById('homeListHoje');
+            const listFuturos = document.getElementById('homeListFuturos');
+
+            const vencidos = processos.filter(p => !p.arquivado && getStatus(p.prazoOficio, p.arquivado) === 'vencido');
+            const hoje = processos.filter(p => !p.arquivado && getStatus(p.prazoOficio, p.arquivado) === 'hoje');
+            const futuros = processos.filter(p => !p.arquivado && getStatus(p.prazoOficio, p.arquivado) === 'futuro').sort((a,b) => new Date(a.prazoOficio) - new Date(b.prazoOficio));
+
+            document.getElementById('badgeCountVencidos').innerText = vencidos.length;
+            document.getElementById('badgeCountHoje').innerText = hoje.length;
+            document.getElementById('badgeCountFuturos').innerText = futuros.length;
+
+            const cardMini = (p, cor) => {
+                const diasArea = calcularDiferencaDias(p.prazoArea);
+                const areaAtrasada = diasArea !== null && diasArea < 0;
+
+                return `
+                    <div class="p-3.5 bg-gray-50/80 dark:bg-gray-800/60 rounded-xl border ${areaAtrasada ? 'border-amber-300 dark:border-amber-700/80 bg-amber-50/30 dark:bg-amber-950/20' : 'border-gray-100 dark:border-gray-700/60'} flex flex-col justify-between gap-2.5">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-gray-800 dark:text-white font-mono truncate">${p.numero}</span>
+                                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${cor} shrink-0">${p.orgao}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1" title="${p.assunto}">${p.assunto}</p>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                ${p.assessor ? `<span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded">👤 ${p.assessor}</span>` : ''}
+                                ${p.secretariaArea ? `<span class="text-[10px] bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium">🏢 ${p.secretariaArea}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 bg-white/80 dark:bg-gray-900/60 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-gray-400 block">Prazo da Área</span>
+                                <span class="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">${formatarDataBR(p.prazoArea)}</span>
+                                <div class="mt-1">${gerarBadgeAlertaPrazo(p.prazoArea, 'area')}</div>
+                            </div>
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-gray-400 block">Prazo do Ofício</span>
+                                <span class="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">${formatarDataBR(p.prazoOficio)}</span>
+                                <div class="mt-1">${gerarBadgeAlertaPrazo(p.prazoOficio, 'oficio')}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-1 border-t border-gray-100 dark:border-gray-700/50 text-[11px]">
+                            <button onclick="editarProcesso(${p.id})" class="text-amber-600 dark:text-amber-400 font-bold hover:underline" title="Editar processo">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="novoOficio(${p.id})" class="text-sky-600 dark:text-sky-400 font-bold hover:underline" title="Novo ofício no mesmo processo">
+                                ➕ Ofício
+                            </button>
+                            <button onclick="toggleArquivar(${p.id})" class="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
+                                Concluir ✓
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            if (listVencidos) {
+                listVencidos.innerHTML = vencidos.length > 0 
+                    ? vencidos.map(p => cardMini(p, 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300')).join('') 
+                    : '<p class="text-xs text-gray-400 text-center py-6">Nenhum processo vencido.</p>';
+            }
+
+            if (listHoje) {
+                listHoje.innerHTML = hoje.length > 0 
+                    ? hoje.map(p => cardMini(p, 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300')).join('') 
+                    : '<p class="text-xs text-gray-400 text-center py-6">Nenhum processo vencendo hoje.</p>';
+            }
+
+            if (listFuturos) {
+                listFuturos.innerHTML = futuros.length > 0 
+                    ? futuros.map(p => cardMini(p, 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300')).join('') 
+                    : '<p class="text-xs text-gray-400 text-center py-6">Nenhum prazo futuro cadastrado.</p>';
+            }
+        }
+
+        function renderizarProcessos() {
+            const tbody = document.getElementById('tabelaProcessosBody');
+            if (!tbody) return;
+
+            const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            let filtrados = processos;
+
+            if (filtroStatusTabela === 'arquivados') {
+                filtrados = filtrados.filter(p => p.arquivado);
+            } else {
+                filtrados = filtrados.filter(p => !p.arquivado);
+                if (filtroStatusTabela === 'vencido') {
+                    filtrados = filtrados.filter(p => getStatus(p.prazoOficio, p.arquivado) === 'vencido');
+                } else if (filtroStatusTabela === 'hoje') {
+                    filtrados = filtrados.filter(p => getStatus(p.prazoOficio, p.arquivado) === 'hoje');
+                } else if (filtroStatusTabela === 'futuro') {
+                    filtrados = filtrados.filter(p => getStatus(p.prazoOficio, p.arquivado) === 'futuro');
+                } else if (filtroStatusTabela === 'dilacao') {
+                    filtrados = filtrados.filter(p => p.dilacao && p.dilacao.trim() !== '');
+                }
+            }
+
+            if (q) {
+                filtrados = filtrados.filter(p => 
+                    p.numero.toLowerCase().includes(q) ||
+                    p.orgao.toLowerCase().includes(q) ||
+                    (p.autoridade && p.autoridade.toLowerCase().includes(q)) ||
+                    (p.assessor && p.assessor.toLowerCase().includes(q)) ||
+                    (p.secretariaArea && p.secretariaArea.toLowerCase().includes(q)) ||
+                    (p.dilacao && p.dilacao.toLowerCase().includes(q)) ||
+                    p.assunto.toLowerCase().includes(q)
+                );
+            }
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-gray-400">Nenhum processo encontrado para os filtros selecionados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map(p => {
+                const prazoOficioFormatado = formatarDataBR(p.prazoOficio);
+                const prazoAreaFormatado = formatarDataBR(p.prazoArea);
+
+                return `
+                    <tr class="hover:bg-gray-50/70 dark:hover:bg-gray-800/40 transition-colors ${p.arquivado ? 'opacity-70 bg-gray-50/40 dark:bg-gray-900/30' : ''}">
+                        <td class="p-4 font-mono font-bold text-gray-800 dark:text-white ${p.arquivado ? 'line-through' : ''}">${p.numero}</td>
+                        <td class="p-4 font-bold text-indigo-600 dark:text-indigo-400">${p.orgao}</td>
+                        <td class="p-4 text-gray-600 dark:text-gray-300">${p.autoridade || '--'}</td>
+                        <td class="p-4">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
+                                👤 ${p.assessor || 'Não atribuído'}
+                            </span>
+                        </td>
+                        <td class="p-4">
+                            ${p.secretariaArea ? `
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-mono">
+                                    🏢 ${p.secretariaArea}
+                                </span>
+                            ` : '<span class="text-gray-400">--</span>'}
+                        </td>
+                        <td class="p-4">
+                            <div class="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">${prazoAreaFormatado}</div>
+                            <div class="mt-1">${gerarBadgeAlertaPrazo(p.prazoArea, 'area')}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-mono text-xs font-extrabold text-gray-900 dark:text-white">${prazoOficioFormatado}</div>
+                            <div class="mt-1">${gerarBadgeAlertaPrazo(p.prazoOficio, 'oficio')}</div>
+                        </td>
+                        <td class="p-4">${p.dilacao ? `<span class="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg text-xs font-semibold">⏳ ${p.dilacao}</span>` : '<span class="text-gray-400">--</span>'}</td>
+                        <td class="p-4 text-gray-600 dark:text-gray-300 max-w-xs truncate" title="${p.assunto}">${p.assunto}</td>
+                        <td class="p-4 text-center">
+                            ${p.arquivado ? `
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Sim</span>
+                            ` : `
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">Não</span>
+                            `}
+                        </td>
+                        <td class="p-4 text-right space-x-1.5 shrink-0">
+                            <button onclick="editarProcesso(${p.id})" class="px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 font-bold text-xs rounded-lg transition-colors" title="Editar processo">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="novoOficio(${p.id})" class="px-2.5 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/50 font-bold text-xs rounded-lg transition-colors" title="Cadastrar novo ofício neste processo">
+                                ➕ Novo Ofício
+                            </button>
+                            <button onclick="toggleArquivar(${p.id})" class="px-3 py-1 font-bold text-xs rounded-lg transition-colors ${p.arquivado ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'}" title="${p.arquivado ? 'Restaurar processo' : 'Arquivar processo'}">
+                                ${p.arquivado ? 'Desarquivar' : 'Arquivar ✓'}
+                            </button>
+                            <button onclick="solicitarExclusao(${p.id})" class="text-gray-400 hover:text-red-500 p-1 transition-colors" title="Excluir">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderizarCriticos() {
+            const listHoje = document.getElementById('listaVencemHoje');
+            const listVencidos = document.getElementById('listaVencidos');
+
+            const hoje = processos.filter(p => !p.arquivado && getStatus(p.prazoOficio, p.arquivado) === 'hoje');
+            const vencidos = processos.filter(p => !p.arquivado && getStatus(p.prazoOficio, p.arquivado) === 'vencido');
+
+            if (listHoje) {
+                listHoje.innerHTML = hoje.length > 0 ? hoje.map(p => `
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-800 dark:text-white text-base">${p.numero}</span>
+                                <span class="text-xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100">${p.orgao}</span>
+                            </div>
+                            <p class="text-xs text-gray-600 dark:text-gray-300">Assessor: <strong class="text-indigo-600 dark:text-indigo-400">${p.assessor || '--'}</strong> | Setor/Área: <strong>${p.secretariaArea || '--'}</strong></p>
+                            <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">${p.assunto}</p>
+                            <div class="flex flex-wrap items-center gap-4 pt-2">
+                                <div>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Prazo da Área: ${formatarDataBR(p.prazoArea)}</span>
+                                    ${gerarBadgeAlertaPrazo(p.prazoArea, 'area')}
+                                </div>
+                                <div>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Prazo do Ofício (Fatal): ${formatarDataBR(p.prazoOficio)}</span>
+                                    ${gerarBadgeAlertaPrazo(p.prazoOficio, 'oficio')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="editarProcesso(${p.id})" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition-colors">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="novoOficio(${p.id})" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition-colors">
+                                ➕ Novo Ofício
+                            </button>
+                            <button onclick="toggleArquivar(${p.id})" class="px-4 py-2 bg-yellow-600 text-white font-bold rounded-xl text-xs hover:bg-yellow-700 transition-colors">
+                                Concluir / Arquivar
+                            </button>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-sm text-gray-400 bg-white dark:bg-darkCard p-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">Nenhum processo vencendo no dia de hoje.</p>';
+            }
+
+            if (listVencidos) {
+                listVencidos.innerHTML = vencidos.length > 0 ? vencidos.map(p => `
+                    <div class="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-gray-800 dark:text-white text-base">${p.numero}</span>
+                                <span class="text-xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100">${p.orgao}</span>
+                            </div>
+                            <p class="text-xs text-red-700 dark:text-red-300 font-semibold">Assessor: ${p.assessor || '--'} | Setor/Área: ${p.secretariaArea || '--'}</p>
+                            <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">${p.assunto}</p>
+                            <div class="flex flex-wrap items-center gap-4 pt-2">
+                                <div>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Prazo da Área: ${formatarDataBR(p.prazoArea)}</span>
+                                    ${gerarBadgeAlertaPrazo(p.prazoArea, 'area')}
+                                </div>
+                                <div>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Prazo do Ofício (Fatal): ${formatarDataBR(p.prazoOficio)}</span>
+                                    ${gerarBadgeAlertaPrazo(p.prazoOficio, 'oficio')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="editarProcesso(${p.id})" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition-colors">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="novoOficio(${p.id})" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition-colors">
+                                ➕ Novo Ofício
+                            </button>
+                            <button onclick="toggleArquivar(${p.id})" class="px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 transition-colors">
+                                Concluir / Arquivar
+                            </button>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-sm text-gray-400 bg-white dark:bg-darkCard p-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">Nenhum processo com prazo vencido.</p>';
+            }
+        }
+
+        function renderizarDilacoes() {
+            const list = document.getElementById('listaDilacoes');
+            if (!list) return;
+
+            const comDilacao = processos.filter(p => !p.arquivado && p.dilacao && p.dilacao.trim() !== '');
+            list.innerHTML = comDilacao.length > 0 ? comDilacao.map(p => `
+                <div class="bg-white dark:bg-darkCard rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <span class="text-xs font-bold text-indigo-600 uppercase">${p.orgao}</span>
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-white mt-0.5">${p.numero}</h4>
+                        <p class="text-sm text-gray-500 mt-1">${p.assunto}</p>
+                        <div class="mt-2.5 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold inline-block border border-amber-200 dark:border-amber-800/40">
+                            📌 Dilação: ${p.dilacao}
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="text-right">
+                            <p class="text-xs text-gray-400">Prazo Original</p>
+                            <p class="font-mono font-bold text-gray-800 dark:text-white text-base">${formatarDataBR(p.prazoOficio)}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="editarProcesso(${p.id})" class="px-3 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-lg hover:bg-amber-100 transition-colors">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="novoOficio(${p.id})" class="px-3 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 font-bold text-xs rounded-lg hover:bg-sky-100 transition-colors">
+                                ➕ Novo Ofício
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-gray-400 text-center py-10">Nenhuma dilação cadastrada no momento.</p>';
+        }
+
+        function renderizarArquivados() {
+            const list = document.getElementById('listaArquivados');
+            if (!list) return;
+
+            const arquivados = processos.filter(p => p.arquivado);
+            list.innerHTML = arquivados.length > 0 ? arquivados.map(p => `
+                <div class="bg-white dark:bg-darkCard rounded-2xl p-5 border border-gray-100 dark:border-gray-700 opacity-90 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-400 uppercase">${p.orgao}</span>
+                            <span class="text-xs text-green-600 dark:text-green-400 font-bold">✓ Arquivado</span>
+                        </div>
+                        <h4 class="font-bold text-gray-800 dark:text-white text-base mt-1 line-through">${p.numero}</h4>
+                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">${p.assunto}</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <button onclick="novoOficio(${p.id})" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-bold" title="Chegou um novo ofício neste processo? Clique aqui">
+                            ➕ Novo Ofício
+                        </button>
+                        <div class="flex items-center gap-3">
+                            <button onclick="editarProcesso(${p.id})" class="text-xs text-amber-600 hover:underline font-bold">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="toggleArquivar(${p.id})" class="text-xs text-indigo-600 hover:underline font-bold">
+                                Desarquivar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-gray-400 col-span-full text-center py-8">Nenhum processo arquivado ainda.</p>';
+        }
+
+        async function toggleArquivar(id) {
+            let procAlterado = null;
+            processos = processos.map(p => {
+                if (p.id === id) {
+                    const novoEstado = !p.arquivado;
+                    procAlterado = { ...p, arquivado: novoEstado };
+                    showToast(novoEstado ? 'Processo arquivado!' : 'Processo restaurado!', '📦');
+                    return procAlterado;
+                }
+                return p;
+            });
+            renderizarTudo();
+            if (procAlterado) {
+                await salvarPersistencia(procAlterado, 'salvar');
+            }
+        }
+
+        function solicitarExclusao(id) {
+            const proc = processos.find(p => p.id === id);
+            acaoConfirmacaoPendente = async () => {
+                processos = processos.filter(p => p.id !== id);
+                renderizarTudo();
+                showToast('Processo excluído com sucesso!', '🗑️');
+                await salvarPersistencia(null, 'excluir', id);
+            };
+            document.getElementById('modalConfirmacaoTitulo').innerText = 'Excluir Processo?';
+            document.getElementById('modalConfirmacaoDesc').innerText = proc ? `Remover definitivamente o processo ${proc.numero}?` : 'Esta ação removerá definitivamente o processo.';
+            document.getElementById('modalConfirmacao').classList.remove('hidden');
+        }
+
+        function limparTodosProcessos() {
+            if (processos.length === 0) {
+                showToast('Não há processos para limpar.', 'ℹ️');
+                return;
+            }
+            acaoConfirmacaoPendente = async () => {
+                const copiaAntiga = [...processos];
+                processos = [];
+                renderizarTudo();
+                showToast('Todos os processos foram removidos!', '🧹');
+                await salvarPersistencia(copiaAntiga, 'limpar');
+            };
+            document.getElementById('modalConfirmacaoTitulo').innerText = 'Limpar Todos os Processos?';
+            document.getElementById('modalConfirmacaoDesc').innerText = 'Atenção: todos os processos ativos e arquivados serão apagados permanentemente.';
+            document.getElementById('modalConfirmacao').classList.remove('hidden');
+        }
+
+        function fecharModalConfirmacao() {
+            acaoConfirmacaoPendente = null;
+            document.getElementById('modalConfirmacao').classList.add('hidden');
+        }
+
+        function executarConfirmacaoModal() {
+            if (typeof acaoConfirmacaoPendente === 'function') {
+                acaoConfirmacaoPendente();
+            }
+            fecharModalConfirmacao();
+        }
+
+        function novoOficio(id) {
+            const proc = processos.find(p => p.id === id);
+            if (!proc) return;
+            editingProcessoId = null;
+            document.getElementById('modalTituloProcesso').innerText = `Novo Ofício: ${proc.numero}`;
+            document.getElementById('btnSalvarProcesso').innerText = 'Salvar Novo Ofício';
+
+            document.getElementById('inputNumero').value = proc.numero || '';
+            document.getElementById('inputOrgao').value = proc.orgao || '';
+            document.getElementById('inputAutoridade').value = proc.autoridade || '';
+            document.getElementById('inputAssessor').value = proc.assessor || '';
+            document.getElementById('inputSecretariaArea').value = proc.secretariaArea || '';
+            document.getElementById('inputPrazoArea').value = '';
+            document.getElementById('inputPrazoOficio').value = '';
+            document.getElementById('inputDilacao').value = '';
+            document.getElementById('inputAssunto').value = proc.assunto ? `[Reiteração/Novo Ofício] ${proc.assunto}` : '[Novo Ofício]';
+
+            document.getElementById('modalNovoProcesso').classList.remove('hidden');
+            showToast('Dados base carregados. Preencha os novos prazos.', '📋');
+        }
+
+        function abrirModalNovo() {
+            editingProcessoId = null;
+            document.getElementById('modalTituloProcesso').innerText = 'Cadastrar Novo Processo';
+            document.getElementById('btnSalvarProcesso').innerText = 'Salvar Processo';
+            limparFormulario();
+            document.getElementById('modalNovoProcesso').classList.remove('hidden');
+        }
+
+        function fecharModalNovo() {
+            editingProcessoId = null;
+            limparFormulario();
+            document.getElementById('modalNovoProcesso').classList.add('hidden');
+        }
+
+        function limparFormulario() {
+            document.getElementById('inputNumero').value = '';
+            document.getElementById('inputOrgao').value = '';
+            document.getElementById('inputAutoridade').value = '';
+            document.getElementById('inputAssessor').value = '';
+            document.getElementById('inputSecretariaArea').value = '';
+            document.getElementById('inputPrazoArea').value = '';
+            document.getElementById('inputPrazoOficio').value = '';
+            document.getElementById('inputDilacao').value = '';
+            document.getElementById('inputAssunto').value = '';
+        }
+
+        function editarProcesso(id) {
+            const proc = processos.find(p => p.id === id);
+            if (!proc) {
+                showToast('Processo não encontrado.', '⚠️');
+                return;
+            }
+
+            editingProcessoId = id;
+            document.getElementById('modalTituloProcesso').innerText = 'Editar Processo';
+            document.getElementById('btnSalvarProcesso').innerText = 'Salvar Alterações';
+
+            document.getElementById('inputNumero').value = proc.numero || '';
+            document.getElementById('inputOrgao').value = proc.orgao || '';
+            document.getElementById('inputAutoridade').value = proc.autoridade || '';
+            document.getElementById('inputAssessor').value = proc.assessor || '';
+            document.getElementById('inputSecretariaArea').value = proc.secretariaArea || '';
+            document.getElementById('inputPrazoArea').value = normalizarParaISO(proc.prazoArea) || '';
+            document.getElementById('inputPrazoOficio').value = normalizarParaISO(proc.prazoOficio) || '';
+            document.getElementById('inputDilacao').value = proc.dilacao || '';
+            document.getElementById('inputAssunto').value = proc.assunto || '';
+
+            document.getElementById('modalNovoProcesso').classList.remove('hidden');
+        }
+
+        async function salvarProcesso() {
+            const numero = document.getElementById('inputNumero').value.trim();
+            const orgao = document.getElementById('inputOrgao').value.trim();
+            const autoridade = document.getElementById('inputAutoridade').value.trim();
+            const assessor = document.getElementById('inputAssessor').value.trim();
+            const secretariaArea = document.getElementById('inputSecretariaArea').value.trim();
+            const prazoArea = document.getElementById('inputPrazoArea').value.trim();
+            const prazoOficio = document.getElementById('inputPrazoOficio').value.trim();
+            const dilacao = document.getElementById('inputDilacao').value.trim();
+            const assunto = document.getElementById('inputAssunto').value.trim();
+
+            if (!numero || !orgao) {
+                showToast('Preencha ao menos o número e o órgão.', '⚠️');
+                return;
+            }
+
+            let processoSalvo = null;
+
+            if (editingProcessoId) {
+                processos = processos.map(p => {
+                    if (p.id === editingProcessoId) {
+                        processoSalvo = {
+                            ...p,
+                            numero,
+                            orgao,
+                            autoridade,
+                            assessor,
+                            secretariaArea,
+                            prazoArea,
+                            prazoOficio,
+                            dilacao,
+                            assunto
+                        };
+                        return processoSalvo;
+                    }
+                    return p;
+                });
+                showToast('Processo atualizado com sucesso!', '✏️');
+            } else {
+                processoSalvo = {
+                    id: Date.now(),
+                    numero,
+                    orgao,
+                    autoridade,
+                    assessor,
+                    secretariaArea,
+                    prazoArea,
+                    prazoOficio,
+                    dilacao,
+                    assunto,
+                    arquivado: false
+                };
+                processos.unshift(processoSalvo);
+                showToast('Ofício registrado com sucesso!', '✅');
+            }
+
+            fecharModalNovo();
+            renderizarTudo();
+            if (processoSalvo) {
+                await salvarPersistencia(processoSalvo, 'salvar');
+            }
+        }
+
+        function exportarBackup() {
+            try {
+                const dataStr = JSON.stringify(processos, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `processos_sms_${obterDataHojeISO()}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast('Backup exportado com sucesso!', '💾');
+            } catch (e) {
+                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(processos, null, 2));
+                const link = document.createElement('a');
+                link.setAttribute('href', dataUri);
+                link.setAttribute('download', `processos_sms_${obterDataHojeISO()}.json`);
+                link.click();
+                showToast('Backup exportado!', '💾');
+            }
+        }
+
+        function importarBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) {
+                        processos = data;
+                        renderizarTudo();
+                        await salvarPersistencia(processos, 'salvar');
+                        showToast('Dados importados com sucesso!', '📥');
+                    }
+                } catch (err) {
+                    showToast('Erro ao importar arquivo JSON.', '❌');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
