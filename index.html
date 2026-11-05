@@ -139,13 +139,13 @@
             </div>
         </div>
         
-        <!-- Indicadores Superiores: Status e Data de Hoje -->
-        <div class="flex items-center gap-3 md:gap-5">
-            <!-- Indicador de Status do Armazenamento -->
-            <div id="statusArmazenamento" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800" title="Status de persistência dos seus processos">
+        <!-- Indicadores Superiores: Status da Nuvem, Data e Tema -->
+        <div class="flex items-center gap-2.5 sm:gap-4">
+            <!-- Botão / Indicador de Sincronização em Nuvem (Google Sheets) -->
+            <button onclick="abrirModalNuvem()" id="statusArmazenamento" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 transition-all cursor-pointer" title="Clique para sincronizar com todos os computadores via Google Planilha">
                 <span id="statusArmazenamentoDot" class="w-2 h-2 rounded-full bg-sky-500"></span>
-                <span id="statusArmazenamentoTexto">Banco Local Ativo 💾</span>
-            </div>
+                <span id="statusArmazenamentoTexto">Nuvem / Planilha ☁️</span>
+            </button>
 
             <!-- Widget da Data Real de Hoje -->
             <div class="flex items-center gap-2 bg-[#f1f5f9] dark:bg-gray-800 px-3.5 py-1.5 rounded-full border border-gray-200/60 dark:border-gray-700" title="Data atual real do seu computador usada para calcular os prazos">
@@ -228,6 +228,10 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2.5">
+                        <button onclick="sincronizarComNuvemManual()" id="btnSyncNuvem" class="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm text-indigo-700 dark:text-indigo-300" title="Sincronizar processos com a nuvem">
+                            <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                            Atualizar Nuvem
+                        </button>
                         <button onclick="limparTodosProcessos()" class="flex items-center gap-2 bg-white dark:bg-darkCard border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm text-red-600 dark:text-red-400">
                             <svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             Limpar Tudo
@@ -462,6 +466,43 @@
         </main>
     </div>
 
+    <!-- MODAL: CONECTAR PLANILHA EM NUVEM (GOOGLE SHEETS) -->
+    <div id="modalNuvem" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden border border-gray-100 dark:border-darkBorder">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-sky-50/70 dark:bg-sky-950/40">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">☁️</span>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">Sincronização em Nuvem (Google Sheets)</h2>
+                </div>
+                <button onclick="fecharModalNuvem()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-lg">✕</button>
+            </div>
+
+            <div class="p-6 space-y-4 text-sm text-gray-600 dark:text-gray-300">
+                <p>
+                    Para que <strong>qualquer computador</strong> da DAOC veja os mesmos processos em tempo real, conecte o app à sua Planilha Google via Apps Script Web App.
+                </p>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">URL do Web App (Google Apps Script)</label>
+                    <input type="url" id="inputNuvemUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white outline-none focus:ring-2 focus:ring-sky-500 font-mono text-xs">
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800/60 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs space-y-1">
+                    <p class="font-bold text-gray-700 dark:text-gray-200">Como obter esse link:</p>
+                    <p>1. Crie uma planilha no Google Drive com os cabeçalhos das colunas.</p>
+                    <p>2. Vá em <em>Extensões > Apps Script</em>, cole o script do guia e clique em <em>Implantar > App da Web</em>.</p>
+                    <p>3. Cole a URL gerada acima e clique em <strong>Conectar e Sincronizar</strong>.</p>
+                </div>
+            </div>
+
+            <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+                <button onclick="desconectarNuvem()" class="text-xs text-red-500 hover:underline font-bold">Desconectar</button>
+                <div class="flex gap-2">
+                    <button onclick="fecharModalNuvem()" class="px-4 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors text-xs">Cancelar</button>
+                    <button onclick="salvarConfigNuvem()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors shadow-sm text-xs">Conectar e Sincronizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: CADASTRAR OU EDITAR PROCESSO -->
     <div id="modalNovoProcesso" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-darkCard rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden border border-gray-100 dark:border-darkBorder">
@@ -574,17 +615,14 @@
 
     <!-- SCRIPTS E LÓGICA DO APLICATIVO -->
     <script>
-        // CONFIGURAÇÕES E ESTADO GLOBAL
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sms-gestor-processos-daoc';
-        let isCloudAvailable = false;
-        let db = null;
-        let auth = null;
-        let currentUser = null;
-        let cloudDocRefFn = null;
-        let cloudSetDocFn = null;
-        let cloudDeleteDocFn = null;
+        // CONFIGURAÇÃO DA NUVEM (GOOGLE SHEETS / APPS SCRIPT)
+        // Se você quiser deixar a URL fixa para ninguém precisar colar, basta preencher dentro das aspas abaixo:
+        let NUVEM_API_URL = ''; 
+        try {
+            const savedUrl = localStorage.getItem('sms_nuvem_api_url');
+            if (savedUrl) NUVEM_API_URL = savedUrl;
+        } catch (e) {}
 
-        // BANCO DE DADOS LOCAL INDEXEDDB (Persistência no Google Sites)
         const IDB_NAME = 'SMS_DAOC_Processos_DB';
         const IDB_STORE = 'processos';
 
@@ -645,12 +683,113 @@
             if (tipo === 'nuvem') {
                 texto.innerText = 'Nuvem Conectada ☁️';
                 dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-                badge.className = 'hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+                badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-all cursor-pointer';
             } else {
-                texto.innerText = 'Banco Local Ativo 💾';
+                texto.innerText = 'Nuvem / Planilha ☁️';
                 dot.className = 'w-2 h-2 rounded-full bg-sky-500';
-                badge.className = 'hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800';
+                badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 transition-all cursor-pointer';
             }
+        }
+
+        function abrirModalNuvem() {
+            const input = document.getElementById('inputNuvemUrl');
+            if (input) input.value = NUVEM_API_URL || '';
+            document.getElementById('modalNuvem').classList.remove('hidden');
+        }
+
+        function fecharModalNuvem() {
+            document.getElementById('modalNuvem').classList.add('hidden');
+        }
+
+        async function salvarConfigNuvem() {
+            const url = document.getElementById('inputNuvemUrl').value.trim();
+            if (!url) {
+                showToast('Informe a URL da sua Planilha / Apps Script.', '⚠️');
+                return;
+            }
+            NUVEM_API_URL = url;
+            try {
+                localStorage.setItem('sms_nuvem_api_url', url);
+            } catch (e) {}
+
+            fecharModalNuvem();
+            showToast('Conectando à planilha...', '⏳');
+            await sincronizarComNuvemManual();
+        }
+
+        function desconectarNuvem() {
+            NUVEM_API_URL = '';
+            try {
+                localStorage.removeItem('sms_nuvem_api_url');
+            } catch (e) {}
+            atualizarIndicadorStatus('local');
+            fecharModalNuvem();
+            showToast('Modo somente local ativado.', 'ℹ️');
+        }
+
+        async function enviarParaNuvem(dados) {
+            if (!NUVEM_API_URL) return;
+            try {
+                await fetch(NUVEM_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                atualizarIndicadorStatus('nuvem');
+            } catch (err) {
+                console.warn("Falha ao salvar na nuvem Google Sheets:", err);
+            }
+        }
+
+        async function buscarDaNuvem() {
+            if (!NUVEM_API_URL) return null;
+            try {
+                const res = await fetch(NUVEM_API_URL);
+                if (!res.ok) return null;
+                const json = await res.json();
+                if (Array.isArray(json)) {
+                    return json.map(p => ({
+                        ...p,
+                        id: p.id || Date.now() + Math.floor(Math.random() * 1000),
+                        arquivado: p.arquivado === true || String(p.arquivado).toLowerCase() === 'true'
+                    }));
+                }
+                return null;
+            } catch (err) {
+                console.warn("Falha ao puxar da nuvem:", err);
+                return null;
+            }
+        }
+
+        async function sincronizarComNuvemManual() {
+            if (!NUVEM_API_URL) {
+                abrirModalNuvem();
+                return;
+            }
+            const btn = document.getElementById('btnSyncNuvem');
+            if (btn) btn.classList.add('opacity-50', 'pointer-events-none');
+            showToast('Sincronizando com a nuvem...', '🔄');
+
+            const dadosNuvem = await buscarDaNuvem();
+            if (dadosNuvem && dadosNuvem.length > 0) {
+                processos = dadosNuvem;
+                salvarNoIndexedDB(processos);
+                try { localStorage.setItem('sms_processos_v2', JSON.stringify(processos)); } catch (e) {}
+                renderizarTudo();
+                atualizarIndicadorStatus('nuvem');
+                showToast('Dados sincronizados com sucesso!', '☁️');
+            } else if (processos.length > 0) {
+                // Se a nuvem estava vazia mas a máquina tinha dados, envia da máquina para a planilha
+                await enviarParaNuvem(processos);
+                atualizarIndicadorStatus('nuvem');
+                showToast('Dados enviados para a planilha central!', '☁️');
+            } else {
+                atualizarIndicadorStatus('nuvem');
+                showToast('Planilha conectada e pronta.', '✅');
+            }
+
+            if (btn) btn.classList.remove('opacity-50', 'pointer-events-none');
         }
 
         function obterDataHojeISO() {
@@ -763,11 +902,11 @@
                 navigator.storage.persist().catch(() => {});
             }
 
+            // 1. Tenta carregar do cache local rápido
             const doIDB = await carregarDoIndexedDB();
             if (doIDB && doIDB.length) {
                 processos = doIDB;
                 renderizarTudo();
-                atualizarIndicadorStatus('local');
             } else {
                 try {
                     const saved = localStorage.getItem('sms_processos_v2');
@@ -777,90 +916,38 @@
                         salvarNoIndexedDB(processos);
                     }
                 } catch (e) {}
-                atualizarIndicadorStatus('local');
             }
 
-            if (typeof __firebase_config !== 'undefined') {
-                try {
-                    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-                    const { getAuth, signInAnonymously, signInWithCustomToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-                    const { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-
-                    cloudDocRefFn = doc;
-                    cloudSetDocFn = setDoc;
-                    cloudDeleteDocFn = deleteDoc;
-
-                    const fbConfig = JSON.parse(__firebase_config);
-                    const app = initializeApp(fbConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    currentUser = auth.currentUser;
-                    if (currentUser) {
-                        isCloudAvailable = true;
-                        const processosCol = collection(db, 'artifacts', appId, 'public', 'data', 'processos');
-
-                        onSnapshot(processosCol, (snapshot) => {
-                            const cloudList = [];
-                            snapshot.forEach(docSnap => {
-                                const data = docSnap.data();
-                                cloudList.push({ ...data, id: Number(docSnap.id) || docSnap.id });
-                            });
-                            if (cloudList.length > 0 || processos.length === 0) {
-                                processos = cloudList;
-                                salvarNoIndexedDB(processos);
-                                renderizarTudo();
-                            }
-                            atualizarIndicadorStatus('nuvem');
-                        }, (error) => {
-                            console.error("Erro no sincronismo em nuvem:", error);
-                            atualizarIndicadorStatus('local');
-                        });
-                    }
-                } catch (err) {
-                    console.warn("Armazenamento em nuvem indisponível:", err);
-                    atualizarIndicadorStatus('local');
+            // 2. Se houver conexão com Nuvem (Google Sheets), busca os dados atualizados
+            if (NUVEM_API_URL) {
+                atualizarIndicadorStatus('nuvem');
+                const nuvem = await buscarDaNuvem();
+                if (nuvem && nuvem.length > 0) {
+                    processos = nuvem;
+                    salvarNoIndexedDB(processos);
+                    try { localStorage.setItem('sms_processos_v2', JSON.stringify(processos)); } catch (e) {}
+                    renderizarTudo();
                 }
+            } else {
+                atualizarIndicadorStatus('local');
             }
         }
 
-        async function salvarPersistencia(novoProcessoOuLista, acao = 'salvar', docId = null) {
+        async function salvarPersistencia() {
             salvarNoIndexedDB(processos);
             try {
                 localStorage.setItem('sms_processos_v2', JSON.stringify(processos));
             } catch (e) {}
 
-            if (isCloudAvailable && db && currentUser && cloudDocRefFn) {
-                try {
-                    if (acao === 'salvar' && novoProcessoOuLista) {
-                        const targetId = String(novoProcessoOuLista.id);
-                        const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', targetId);
-                        await cloudSetDocFn(docRef, novoProcessoOuLista);
-                    } else if (acao === 'excluir' && docId) {
-                        const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', String(docId));
-                        await cloudDeleteDocFn(docRef);
-                    } else if (acao === 'limpar') {
-                        for (const p of novoProcessoOuLista) {
-                            const docRef = cloudDocRefFn(db, 'artifacts', appId, 'public', 'data', 'processos', String(p.id));
-                            await cloudDeleteDocFn(docRef);
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Erro ao sincronizar na nuvem:", err);
-                }
+            if (NUVEM_API_URL) {
+                await enviarParaNuvem(processos);
             }
         }
 
         function iniciarApp() {
             aplicarTema();
             configurarBotoesGlobais();
-            renderizarTudo(); // Chamada imediata para data real de hoje aparecer na hora
+            renderizarTudo();
             iniciarArmazenamento();
         }
 
@@ -915,6 +1002,7 @@
                 if (e.key === 'Escape') {
                     fecharModalNovo();
                     fecharModalConfirmacao();
+                    fecharModalNuvem();
                 }
             });
 
@@ -928,6 +1016,12 @@
             if (modalConf) {
                 modalConf.addEventListener('click', (e) => {
                     if (e.target === modalConf) fecharModalConfirmacao();
+                });
+            }
+            const modalNuv = document.getElementById('modalNuvem');
+            if (modalNuv) {
+                modalNuv.addEventListener('click', (e) => {
+                    if (e.target === modalNuv) fecharModalNuvem();
                 });
             }
         }
@@ -948,7 +1042,6 @@
             const target = document.getElementById(`tab-${tabName}`);
             if (target) target.classList.remove('hidden');
 
-            // Atualiza sidebar desktop
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.className = "nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800";
             });
@@ -957,7 +1050,6 @@
                 activeBtn.className = "nav-item w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all bg-[#eef2ff] dark:bg-indigo-950/50 text-[#4f46e5] dark:text-indigo-400 font-bold";
             }
 
-            // Atualiza navbar mobile
             const tabsMobile = ['dashboard', 'processos', 'prazos', 'dilacoes', 'arquivados'];
             tabsMobile.forEach(t => {
                 const mobBtn = document.getElementById(`mobile-nav-${t}`);
@@ -1367,20 +1459,16 @@
         }
 
         async function toggleArquivar(id) {
-            let procAlterado = null;
             processos = processos.map(p => {
                 if (String(p.id) === String(id)) {
                     const novoEstado = !p.arquivado;
-                    procAlterado = { ...p, arquivado: novoEstado };
                     showToast(novoEstado ? 'Processo arquivado!' : 'Processo restaurado!', '📦');
-                    return procAlterado;
+                    return { ...p, arquivado: novoEstado };
                 }
                 return p;
             });
             renderizarTudo();
-            if (procAlterado) {
-                await salvarPersistencia(procAlterado, 'salvar');
-            }
+            await salvarPersistencia();
         }
 
         function solicitarExclusao(id) {
@@ -1389,7 +1477,7 @@
                 processos = processos.filter(p => String(p.id) !== String(id));
                 renderizarTudo();
                 showToast('Processo excluído com sucesso!', '🗑️');
-                await salvarPersistencia(null, 'excluir', id);
+                await salvarPersistencia();
             };
             document.getElementById('modalConfirmacaoTitulo').innerText = 'Excluir Processo?';
             document.getElementById('modalConfirmacaoDesc').innerText = proc ? `Remover definitivamente o processo ${proc.numero}?` : 'Esta ação removerá definitivamente o processo.';
@@ -1402,11 +1490,10 @@
                 return;
             }
             acaoConfirmacaoPendente = async () => {
-                const copiaAntiga = [...processos];
                 processos = [];
                 renderizarTudo();
                 showToast('Todos os processos foram removidos!', '🧹');
-                await salvarPersistencia(copiaAntiga, 'limpar');
+                await salvarPersistencia();
             };
             document.getElementById('modalConfirmacaoTitulo').innerText = 'Limpar Todos os Processos?';
             document.getElementById('modalConfirmacaoDesc').innerText = 'Atenção: todos os processos ativos e arquivados serão apagados permanentemente.';
@@ -1512,12 +1599,10 @@
                 return;
             }
 
-            let processoSalvo = null;
-
             if (editingProcessoId) {
                 processos = processos.map(p => {
                     if (String(p.id) === String(editingProcessoId)) {
-                        processoSalvo = {
+                        return {
                             ...p,
                             numero,
                             orgao,
@@ -1529,13 +1614,12 @@
                             dilacao,
                             assunto
                         };
-                        return processoSalvo;
                     }
                     return p;
                 });
                 showToast('Processo atualizado com sucesso!', '✏️');
             } else {
-                processoSalvo = {
+                const novo = {
                     id: Date.now(),
                     numero,
                     orgao,
@@ -1548,15 +1632,13 @@
                     assunto,
                     arquivado: false
                 };
-                processos.unshift(processoSalvo);
+                processos.unshift(novo);
                 showToast('Ofício registrado com sucesso!', '✅');
             }
 
             fecharModalNovo();
             renderizarTudo();
-            if (processoSalvo) {
-                await salvarPersistencia(processoSalvo, 'salvar');
-            }
+            await salvarPersistencia();
         }
 
         function exportarBackup() {
@@ -1595,7 +1677,7 @@
                             id: item.id || Date.now() + Math.floor(Math.random() * 1000)
                         }));
                         renderizarTudo();
-                        await salvarPersistencia(processos, 'salvar');
+                        await salvarPersistencia();
                         showToast('Dados importados com sucesso!', '📥');
                     }
                 } catch (err) {
